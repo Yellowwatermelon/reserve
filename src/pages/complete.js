@@ -16,6 +16,11 @@ export default function Complete() {
     }
   }, []);
 
+  // 서버사이드 렌더링 시 기본값 처리
+  if (!state.date) {
+    return null;
+  }
+
   const handleCapture = async () => {
     try {
       const element = document.getElementById('capture-area');
@@ -23,12 +28,21 @@ export default function Complete() {
       
       // 이미지로 저장
       const link = document.createElement('a');
-      link.download = `예약확인서_${format(state.date, 'yyyyMMdd')}.png`;
+      link.download = `예약확인서_${format(new Date(state.date), 'yyyyMMdd')}.png`;
       link.href = canvas.toDataURL();
       link.click();
     } catch (error) {
       console.error('화면 캡처 중 오류가 발생했습니다:', error);
       window.print();
+    }
+  };
+
+  const formatDate = (date) => {
+    try {
+      return format(new Date(date), 'yyyy년 M월 d일', { locale: ko });
+    } catch (error) {
+      console.error('날짜 형식 변환 중 오류:', error);
+      return '날짜 정보 없음';
     }
   };
 
@@ -40,7 +54,10 @@ export default function Complete() {
     >
       <div className="text-center space-y-8">
         <div id="capture-area" className="bg-gray-50 p-6 rounded-lg space-y-4">
-          <p>예약 일시: {format(state.date, 'yyyy년 M월 d일', { locale: ko })} {state.time}</p>
+          <p className="text-sm text-gray-500">
+            예약 완료 시간: {new Date().toLocaleString('ko-KR')}
+          </p>
+          <p>예약 일시: {formatDate(state.date)} {state.time}</p>
           <p>성명: {state.name}</p>
           <p>연락처: {state.phone}</p>
         </div>
@@ -63,4 +80,11 @@ export default function Complete() {
       </div>
     </Layout>
   );
+}
+
+// getStaticProps 추가
+export async function getStaticProps() {
+  return {
+    props: {}
+  };
 }
