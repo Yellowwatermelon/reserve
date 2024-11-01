@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -9,16 +9,26 @@ import { useReservation } from '../contexts/ReservationContext';
 export default function Complete() {
   const router = useRouter();
   const { state } = useReservation();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (!state.date || !state.time || !state.name || !state.phone) {
       router.replace('/');
     }
   }, []);
 
-  // 서버사이드 렌더링 시 기본값 처리
-  if (!state.date) {
-    return null;
+  // 클라이언트 사이드 렌더링만 수행
+  if (!mounted) {
+    return (
+      <Layout 
+        pageTitle="예약 완료"
+        pageSubtitle="예약이 성공적으로 완료되었습니다"
+        showFooter={false}
+      >
+        <div className="text-center">로딩중...</div>
+      </Layout>
+    );
   }
 
   const handleCapture = async () => {
@@ -26,23 +36,13 @@ export default function Complete() {
       const element = document.getElementById('capture-area');
       const canvas = await html2canvas(element);
       
-      // 이미지로 저장
       const link = document.createElement('a');
-      link.download = `예약확인서_${format(new Date(state.date), 'yyyyMMdd')}.png`;
+      link.download = `예약확인서_${state.date ? format(new Date(state.date), 'yyyyMMdd') : 'unknown'}.png`;
       link.href = canvas.toDataURL();
       link.click();
     } catch (error) {
       console.error('화면 캡처 중 오류가 발생했습니다:', error);
       window.print();
-    }
-  };
-
-  const formatDate = (date) => {
-    try {
-      return format(new Date(date), 'yyyy년 M월 d일', { locale: ko });
-    } catch (error) {
-      console.error('날짜 형식 변환 중 오류:', error);
-      return '날짜 정보 없음';
     }
   };
 
@@ -57,7 +57,9 @@ export default function Complete() {
           <p className="text-sm text-gray-500">
             예약 완료 시간: {new Date().toLocaleString('ko-KR')}
           </p>
-          <p>예약 일시: {formatDate(state.date)} {state.time}</p>
+          {state.date && (
+            <p>예약 일시: {format(new Date(state.date), 'yyyy년 M월 d일', { locale: ko })} {state.time}</p>
+          )}
           <p>성명: {state.name}</p>
           <p>연락처: {state.phone}</p>
         </div>
@@ -82,9 +84,11 @@ export default function Complete() {
   );
 }
 
-// getStaticProps 추가
-export async function getStaticProps() {
+// 정적 페이지 생성 설정
+export const getStaticProps = async () => {
   return {
-    props: {}
+    props: {
+      initialData: null
+    }
   };
-}
+};
